@@ -62,3 +62,6 @@ typings/
 
 # config folder
 config/
+
+# batch
+.bat
