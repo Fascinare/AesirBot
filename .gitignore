@@ -64,4 +64,7 @@ typings/
 config/
 
 # batch
-.bat
+*.bat
+
+commands/tests.js
+commands/donations.json
