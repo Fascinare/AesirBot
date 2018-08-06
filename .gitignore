@@ -65,3 +65,6 @@ config/
 
 # batch
 .bat
+
+# tests file
+tests.js
