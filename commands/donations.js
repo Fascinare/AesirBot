@@ -1,5 +1,6 @@
-const Jimp = require("jimp");
 const fs = require('fs');
+const { registerFont, createCanvas, loadImage } = require('canvas');
+registerFont('./fonts/TitilliumWeb-Regular.ttf', {family: "TitilliumWeb"});
 var rawdata = fs.readFileSync('./commands/donations.json');
 const donations = JSON.parse(rawdata);
 var total = parseFloat(donations.total);
@@ -14,7 +15,14 @@ module.exports = {
     enabled: true,
     restricted: true,
     permissions: "ADMINISTRATOR",
-    execute(message, args){
+    async execute(message, args){
+
+        const cvs = createCanvas(400, 160),
+        ctx = cvs.getContext('2d');
+        const background = await loadImage('./images/bg.png');
+        const bar = await loadImage('./images/bar.png');
+        const overlay = await loadImage('./images/overlay.png');
+        ctx.drawImage(background, 0, 0);
 
         if(args[0] === "update") return calculate();
 
@@ -63,44 +71,26 @@ module.exports = {
 
         function calculate(){
             percent = total / goal;
-            let width = Math.floor(percent * 600);
+            let width = Math.floor((percent * 392) + 4);
             percent = Math.round(percent * 100);
-            setprogress(width);
-        }
-        
-        function setprogress(width){
-            if(width > 600) width = 600;
+            if(width > 400) width = 400;
             if(width === 0) width = 1;
-            Jimp.read("./images/progressbar.png").then(function (bar) {
-            bar.resize(width, 40);
-            combine(bar);
-            }).catch(function (err){
-                console.error(err);
-            });
-        }
-        
-        function combine(bar){
-            Jimp.read("./images/progressbg.png").then(function (bg) {
-                bg.composite( bar, 5, 5).write("./images/final.png");
-                setTimeout(sendMessage,100);
-            }).catch(function (err){
-                console.error(err);
-            });
+            ctx.drawImage(bar, 0, 0, width, bar.height, 0, 0, width, bar.height);
+            ctx.drawImage(overlay, 0, 0);
+            ctx.font = '16px "TitilliumWeb"';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(`Current Goal: ${goaltitle} - $${goal}`, 3, 146);
+            sendMessage();
         }
 
         function saveFile(){
-            fs.writeFile('./donations.json', JSON.stringify(donations, null, 4), function (err){
+            fs.writeFile('./commands/donations.json', JSON.stringify(donations, null, 4), function (err){
                 if(err) return console.log(err);
             })
         }
 
         function sendMessage(){
-            var attach = new Discord.Attachment("./images/final.png", "final.png");
-            var embed = new Discord.RichEmbed()
-            .setColor(1806636)
-            .setTitle("Æsir Neo Arcadia Donation Tracker")
-            .setDescription(`Current Goal: **${goaltitle}** - *$${goal}*\nProgress: $${parseFloat(total).toFixed(2)} / $${goal} *(${percent}%)*`)
-            .attachFile(attach);
+            var attach = new Discord.Attachment(cvs.toBuffer(), "donation-tracker.png");
 
             if(message.guild.available){
                 var channels = message.guild.channels;
@@ -117,7 +107,7 @@ module.exports = {
             }
 
             function send(channel){
-                channel.send({embed})
+                channel.send(attach)
                 .then(function(msg){
                     donations.messageID = msg.id;
                     saveFile();
