@@ -6,12 +6,12 @@ module.exports = {
     description: 'Get player counts for all Æsir servers.',
     enabled: true,
     async execute(message, args) {
-    //This command queries the 4 ARK servers and sends a discord embed which is sent once all 4 respond or timeout
-    var ab = queryserver(config.ports.ab);
-    var oly = queryserver(config.ports.temp);
-    var rag = queryserver(config.ports.rag);
-    var vol = queryserver(config.ports.volc);
 
+    var servers = [];
+    for (i = 0; i < config.ports.length; i++){
+      servers.push(queryserver(config.ports[i]));
+    }
+    
     function queryserver(port){
       return new Promise(function(resolve, reject){
         steamServerStatus.getServerStatus('ark.anagaming.gq', port, function(serverInfo) {
@@ -21,15 +21,10 @@ module.exports = {
             resolve(serverInfo);
           }
         })
-      })
+      }).catch(error => {return error})
     }
 
-    Promise.all([
-      ab.catch(error => {return error}), 
-      oly.catch(error => {return error}), 
-      rag.catch(error => {return error}), 
-      vol.catch(error => {return error})
-    ]).then(status => {
+    Promise.all(servers).then(status => {
       var richEmbed = new Discord.RichEmbed().setColor(15304590);
       for (i = 0; i < status.length; i++){
         if (status[i].name === "Error"){
